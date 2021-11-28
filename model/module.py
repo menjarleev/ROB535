@@ -49,13 +49,13 @@ class CBAM(nn.Module):
         return x
 
 class RCBAM(nn.Module):
-    def __init__(self, in_channel, out_channel, norm_layer, activation=nn.ReLU(True), kernel_size=3, stride=1, padding_mode='reflect'):
+    def __init__(self, in_channel, out_channel, norm_layer, activation=nn.ReLU, kernel_size=3, stride=1, padding_mode='reflect'):
         super(RCBAM, self).__init__()
         self.conv1 = nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, padding_mode=padding_mode)
         self.channel1 = ChannelAttention(out_channel)
         self.spatial1 = SpatialAttention()
         self.norm1 = norm_layer(out_channel)
-        self.act = activation
+        self.act = activation()
         self.conv2 = nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, padding_mode=padding_mode)
         self.channel2 = ChannelAttention(out_channel)
         self.spatial2 = SpatialAttention()

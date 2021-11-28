@@ -12,22 +12,25 @@ class PureRGBNet(nn.Module):
                  padding_mode='reflect'):
         super(PureRGBNet, self).__init__()
         self.num_res_block = num_res_block
-        input_layer = [nn.Conv2d(input_dim, ngf, kernel_size=7, stride=1, padding=3, padding_mode=padding_mode),
+        input_layer = [nn.Conv2d(input_dim, ngf, kernel_size=7, stride=2, padding=3, padding_mode=padding_mode),
                        nn.BatchNorm2d(ngf),
-                       nn.ReLU()]
+                       nn.ReLU(),
+                       nn.MaxPool2d(3, 2)]
         self.input = nn.Sequential(*input_layer)
         for i in range(num_res_block):
             res_block = []
-            for j in range(max(3 - i, 1)):
-                res_block += [RCBAM(ngf, ngf, norm_layer)]
+            res_block += [RCBAM(ngf, ngf, norm_layer, kernel_size=1),
+                          RCBAM(ngf, ngf, norm_layer, kernel_size=3),
+                          RCBAM(ngf, ngf, norm_layer, kernel_size=1)]
             next_ngf = min(max_channel, ngf * 2)
             res_block += [ResnetBlock(ngf, next_ngf, norm_layer, kernel_size=3, stride=2, padding_mode=padding_mode)]
             res_block = nn.Sequential(*res_block)
             setattr(self, f'res_block_{i}', res_block)
             ngf = next_ngf
         self.max_pool = nn.AdaptiveMaxPool2d(1)
-        self.fc = nn.Linear(ngf, num_class)
-        self.out = nn.Softmax(dim=1)
+        self.fc1 = nn.Linear(ngf, 1024)
+        self.actv = nn.ReLU()
+        self.fc2 = nn.Linear(1024, num_class)
 
     def forward(self, x):
         x = self.input(x)
@@ -36,6 +39,5 @@ class PureRGBNet(nn.Module):
             res_block = getattr(self, f'res_block_{i}')
             x = res_block(x)
         x = self.max_pool(x)
-        x = self.fc(x.view(bs, -1))
-        x = self.out(x)
+        x = self.fc2(self.actv(self.fc1(x.view(bs, -1))))
         return x

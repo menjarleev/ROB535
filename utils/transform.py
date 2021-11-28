@@ -37,7 +37,7 @@ def flip2d(img):
             _img = _img[::-1, :, :]
         return _img
     hflip = random.random() < 0.5
-    vflip = random.random() < 0.5
+    vflip = False
     if type(img) == list:
         return [_flip(i, hflip, vflip) for i in img]
     else:
@@ -45,9 +45,9 @@ def flip2d(img):
 
 def rotate2d(img):
     def _rot(_img, _degree):
-        _img = rotate(_img, _degree, preserve_range=True)
+        _img = rotate(_img, _degree, preserve_range=True, mode='symmetric')
         return _img
-    degree = random.randint(0, 45)
+    degree = random.randint(0, 15)
     if type(img) == list:
         return [_rot(i, degree) for i in img]
     else:
@@ -58,8 +58,8 @@ def cutout(img, sz):
         _img[y:y + _sz, x:x + _sz] = 0
         return _img
     (h, w, _) = img.shape
-    x = random.randint(0, w - sz)
-    y = random.randint(0, h - sz)
+    x = random.randint(0, max(w - sz, 0))
+    y = random.randint(0, max(h - sz, 0))
     if type(img) == list:
         return [_cutout(i, x, y, sz) for i in img]
     else:

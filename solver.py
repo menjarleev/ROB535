@@ -57,7 +57,7 @@ class Solver:
             img = inputs['image'].to(self.device)
             label = inputs['label'].to(self.device)
             y_hat = self.model(img)
-            loss = loss_func(label, y_hat)
+            loss = loss_func(y_hat, label)
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()

@@ -29,6 +29,8 @@ class BaseDataset(Dataset):
         if phase == 'test':
             self.file = files
         elif phase == 'val':
+            if holdout == -1:
+                holdout = 0
             start = int(len(files) * (holdout / k_fold))
             end = int(len(files) * (holdout + 1) / k_fold)
             self.file = files[start:end]
@@ -95,9 +97,9 @@ class BaseDataset(Dataset):
                     btm_idx = min(top_idx + in_h + 1, h)
                     img = img[top_idx: btm_idx, left_idx: right_idx]
 
-                if self.agu_func is not None:
-                    img = self.agu_func(img)
         img = resize(img, self.input_size, anti_aliasing=True)
+        if self.agu_func is not None and self.phase == 'train':
+            img = self.agu_func(img)
         # transpose image
         img = np.transpose(img, (2, 0, 1))
         img = torch.from_numpy(img).float()

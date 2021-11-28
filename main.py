@@ -4,7 +4,7 @@ from model.model import PureRGBNet
 from data.dataset import BaseDataset
 from torch.utils.data import DataLoader
 from functools import partial
-from utils.transform import rotate2d, cutout, shift_color, guassian_noise, Transform
+from utils.transform import rotate2d, cutout, shift_color, guassian_noise, flip2d, Transform
 from solver import Solver
 import random
 import numpy as np
@@ -47,7 +47,7 @@ def main():
         # profiler.start()
         aug_func = None
         if opt.augment:
-            t = [rotate2d, partial(cutout, sz=64), shift_color, partial(guassian_noise, std=0.05)]
+            t = [flip2d, rotate2d, partial(cutout, sz=32), shift_color, partial(guassian_noise, std=0.05)]
             aug_func= Transform(t)
         train_dataset = BaseDataset(base_path=opt.data_root,
                                     phase='train',
