@@ -15,6 +15,7 @@ python3 main.py --data_root YOUR_DATA_ROOT_TO_DEPLOY --log_interval 100 --save_i
 ## test
 to test the model, run
 ```bash
-python3 main.py --data_root YOUR_DATAROOT_TO_DEPLOY --test --gpu_id 0 --model_dir ./ckpt/simple_lr_0.0001_bs_8_maxstep_10000_1 --step_label best
+python3 main.py --data_root YOUR_DATAROOT_TO_DEPLOY --test --gpu_id 0 --model_dir /home/ubuntu/ROB535/ckpt/FPN_lr_1e-05_bs_4_maxstep_10000_1
+--step_label best
 ```
-The output is in ```./ckpt/simple_lr_0.0001_bs_8_maxstep_10000_4/infer.csv```
+The output is in ```/home/ubuntu/ROB535/ckpt/FPN_lr_1e-05_bs_4_maxstep_10000_1/infer.csv```

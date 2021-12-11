@@ -156,7 +156,7 @@ class Solver:
     def inference(self, folder_path, save_dir, label):
         self.load(save_dir, label, False)
         self.model.eval()
-        dest_infer_path = f'{save_dir}/infer.csv'
+        dest_infer_path = f'/infer.csv'
         files = glob(f'{folder_path}/*/*_image.jpg')
         files.sort()
 
@@ -164,7 +164,7 @@ class Solver:
             writer = csv.writer(f, delimiter=',', lineterminator='\n')
             writer.writerow(['guid/image', 'label'])
             for file in files:
-                img = resize(io.imread(file), (1024, 2048))
+                img = resize(io.imread(file), (512, 1024))
                 img = torch.from_numpy(np.transpose(img - 0.5, (2, 0, 1))).float().to(self.device).unsqueeze(0)
                 out = self.model(img)
                 if type(out) == list:

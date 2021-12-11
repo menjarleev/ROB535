@@ -27,7 +27,7 @@ class PureRGBNet(nn.Module):
             res_block = nn.Sequential(*res_block)
             setattr(self, f'res_block_{i}', res_block)
             ngf = next_ngf
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.max_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc1 = nn.Linear(ngf, 1024)
         self.actv = nn.ReLU(inplace=True)
         self.fc2 = nn.Linear(1024, num_class)
@@ -76,7 +76,7 @@ class ModifiedFPN(nn.Module):
                                            nn.ReLU(True))
                 setattr(self, f'feat_layer_{i}', feat_layer)
             ngf = next_ngf
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.max_pool = nn.AdaptiveAvgPool2d((1, 1))
         for i in range(scale):
             out_layer = nn.Sequential(
                 nn.Conv2d(out_channel, out_channel, kernel_size=3, stride=1, padding=1, padding_mode=padding_mode),

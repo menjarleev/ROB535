@@ -47,7 +47,7 @@ def rotate2d(img):
     def _rot(_img, _degree):
         _img = rotate(_img, _degree, preserve_range=True, mode='symmetric')
         return _img
-    degree = random.randint(0, 15)
+    degree = random.randint(0, 10)
     if type(img) == list:
         return [_rot(i, degree) for i in img]
     else:

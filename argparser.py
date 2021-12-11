@@ -6,7 +6,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--gpu_id', type=int, default=-1)
     parser.add_argument('--data_root', type=str, default='./')
-    parser.add_argument('--num_res_block', type=int, default=5)
+    parser.add_argument('--num_res_block', type=int, default=7)
     parser.add_argument('--ngf', type=int, default=32)
     parser.add_argument('--input_dim', type=int, default=3)
     parser.add_argument('--input_size', default=(512, 1024))
