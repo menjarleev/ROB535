@@ -1,1 +1,1 @@
-python3 main.py --data_root /home/ec2-user/deploy --log_interval 1000 --save_interval 5000 --train --val --test --holdout 0 --gpu_id 0 --augment
+python3 main.py --data_root /home/ec2-user/deploy --log_interval 100 --save_interval 500 --train --val --test --holdout 0 --gpu_id 0 --augment

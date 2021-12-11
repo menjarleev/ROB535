@@ -1,6 +1,6 @@
 from argparser import get_option
 from utils.visualizer import Visualizer
-from model.model import PureRGBNet
+from model.model import PureRGBNet, ModifiedFPN
 from model.resnet import *
 from data.dataset import BaseDataset
 from torch.utils.data import DataLoader
@@ -42,6 +42,8 @@ def main():
     network = None
     if opt.model == 'simple':
         network = PureRGBNet(opt.num_res_block, opt.ngf, opt.max_channel, opt.input_dim, opt.num_class)
+    elif opt.model == 'FPN':
+        network = ModifiedFPN(opt.num_res_block, opt.ngf, opt.max_channel, opt.input_dim, opt.num_class)
     elif opt.model == 'resnet34':
         network = resnet34()
     elif opt.model == 'resnet50':
@@ -56,7 +58,7 @@ def main():
         # profiler.start()
         aug_func = None
         if opt.augment:
-            t = [flip2d, rotate2d, partial(cutout, sz=32), shift_color, partial(guassian_noise, std=0.001)]
+            t = [flip2d, rotate2d, partial(cutout, sz=32), shift_color, partial(guassian_noise, std=0.0001)]
             aug_func= Transform(t)
         train_dataset = BaseDataset(base_path=opt.data_root,
                                     phase='train',

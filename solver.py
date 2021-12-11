@@ -60,7 +60,12 @@ class Solver:
             img = inputs['image'].to(self.device)
             label = inputs['label'].to(self.device)
             y_hat = self.model(img)
-            loss = loss_func(y_hat, label)
+            loss = 0
+            if type(y_hat) == list:
+                for y_hat_i in y_hat:
+                    loss += loss_func(y_hat_i, label)
+            else:
+                loss = loss_func(y_hat, label)
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()
@@ -159,9 +164,15 @@ class Solver:
             writer = csv.writer(f, delimiter=',', lineterminator='\n')
             writer.writerow(['guid/image', 'label'])
             for file in files:
-                img = resize(io.imread(file), (256, 512))
+                img = resize(io.imread(file), (1024, 2048))
                 img = torch.from_numpy(np.transpose(img - 0.5, (2, 0, 1))).float().to(self.device).unsqueeze(0)
                 out = self.model(img)
+                if type(out) == list:
+                    out_cnt = torch.zeros_like(out[0])
+                    for out_i in out:
+                        y_hat_i = torch.argmax(out_i, 1)
+                        out_cnt[range(y_hat_i.shape[0]), y_hat_i] += 1
+                out = out_cnt
                 y_hat = torch.argmax(out, 1)
                 pred = y_hat[0].detach().cpu().item()
                 guid = file.split('/')[-2]
@@ -178,8 +189,14 @@ class Solver:
             img = inputs['image'].to(self.device)
             label = inputs['label'].to(self.device)
             out = self.model(img)
+            if type(out) == list:
+                out_cnt = torch.zeros_like(out[0])
+                for out_i in out:
+                    y_hat_i = torch.argmax(out_i, 1)
+                    out_cnt[range(y_hat_i.shape[0]), y_hat_i] += 1
+                out = out_cnt
             y_hat = torch.argmax(out, 1)
-            y = torch.argmax(label, 1)
+            y = label
             correct += torch.sum(y_hat == y)
             total += img.shape[0]
         self.model.train()

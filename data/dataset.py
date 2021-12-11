@@ -107,9 +107,7 @@ class BaseDataset(Dataset):
         item_dict['image'] = img
         if self.phase == 'train' or self.phase == 'val':
             # one hot encoding
-            label = np.zeros(self.num_class)
-            label[self.label[index]] = 1
-            label = torch.from_numpy(label)
+            label = torch.tensor(self.label[index])
             item_dict['label'] = label
         return item_dict
 
