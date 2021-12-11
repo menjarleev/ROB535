@@ -1,7 +1,6 @@
 from torch.utils.data import Dataset
 from utils.transform import rotate3d, get_bbox
 from skimage.transform import resize
-import skimage
 import os
 from glob import glob
 import torch
@@ -9,10 +8,10 @@ import skimage.io as io
 import numpy as np
 
 class BaseDataset(Dataset):
-    def __init__(self, base_path, phase='train', holdout=0, k_fold=10, input_size=(256, 512), num_class=0, aug_func=None, augment=False):
+    def __init__(self, base_path, phase='train', holdout=0, k_fold=10, input_size=(256, 512), num_class=0, transform=None, augment=False):
         self.phase = phase
         self.input_size = input_size
-        self.agu_func = aug_func
+        self.transform = transform
         self.augment = augment
         folder = 'test' if phase == 'test' else 'trainval'
         folder_path = os.path.join(base_path, folder)
@@ -47,7 +46,7 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, index):
         file_path = self.file[index]
-        img = skimage.img_as_float64(io.imread(file_path))
+        img = io.imread(file_path)
         if self.phase == 'train':
             if self.augment:
                 proj = np.fromfile(file_path.replace('_image.jpg', '_proj.bin'), dtype=np.float32)
@@ -97,14 +96,13 @@ class BaseDataset(Dataset):
                     btm_idx = min(top_idx + in_h + 1, h)
                     img = img[top_idx: btm_idx, left_idx: right_idx]
 
-        img = resize(img, self.input_size, anti_aliasing=True)
-        if self.agu_func is not None and self.phase == 'train':
-            img = self.agu_func(img)
+        img = resize(img, self.input_size)
+        if self.transform is not None and self.phase == 'train':
+            img = self.transform(img)
         # transpose image
-        img = np.transpose(img, (2, 0, 1))
-        img = torch.from_numpy(img).float()
         # normalize image to range [-0.5, 0.5]
         img = img - 0.5
+        img = torch.from_numpy(np.transpose(img, (2, 0, 1))).float()
         item_dict = {}
         item_dict['image'] = img
         if self.phase == 'train' or self.phase == 'val':

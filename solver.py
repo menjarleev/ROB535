@@ -1,8 +1,11 @@
 from utils.visualizer import Visualizer
 from torch.utils.data import DataLoader
 from data.dataset import BaseDataset
+import numpy as np
+from skimage.transform import resize
 from subprocess import call
 from glob import glob
+import skimage.io as io
 import torch.nn as nn
 import torch
 import os
@@ -29,7 +32,7 @@ class Solver:
         loss_func = nn.CrossEntropyLoss()
         self.model.to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr, betas=(0.9, 0.999))
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optim, milestones=[int(max_step * 0.5), int(max_step * 0.75)], gamma=0.1)
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optim, milestones=[10000], gamma=0.1)
         Visualizer.log_print("# params of model: {}".format(sum(map(lambda x: x.numel(), self.model.parameters()))))
 
         log_json = {}
@@ -121,25 +124,49 @@ class Solver:
         self.save(save_dir, 'latest')
 
     @torch.no_grad()
-    def inference(self, dataloader, data_root, save_dir, label):
+    # def inference(self, dataloader, save_dir, label):
+    #     self.load(save_dir, label, False)
+    #     self.model.eval()
+    #     tqdm_data_loader = tqdm(dataloader, desc='infer', leave=False)
+    #     dest_infer_path = f'{save_dir}/infer.csv'
+    #     file_idx = 0
+    #     filename = dataloader.dataset.file
+    #     with open(dest_infer_path, 'w') as f:
+    #         writer = csv.writer(f, delimiter=',', lineterminator='\n')
+    #         writer.writerow(['guid/image', 'label'])
+    #         for i, inputs in enumerate(tqdm_data_loader):
+    #             img = inputs['image'].to(self.device)
+    #             out = self.model(img)
+    #             y_hat = torch.argmax(out, 1)
+    #             bs = img.size()[0]
+    #             for j in range(bs):
+    #                 guid = filename[file_idx].split('/')[-2]
+    #                 idx = filename[file_idx].split('/')[-1].replace('_image.jpg', '')
+    #                 pred = y_hat[j].detach().cpu().item()
+    #                 writer.writerow([f'{guid}/{idx}', pred])
+    #                 # tmp = inputs['image'][j].numpy().transpose(1, 2, 0)
+    #                 # io.imsave(f'predict/{guid}-{idx}-{pred}.jpg', (tmp + 0.5) * 255)
+    #                 file_idx += 1
+
+    def inference(self, folder_path, save_dir, label):
         self.load(save_dir, label, False)
         self.model.eval()
-        files = glob(f'{data_root}/test/*/*_image.jpg')
-        files.sort()
-        tqdm_data_loader = tqdm(dataloader, desc='infer', leave=False)
         dest_infer_path = f'{save_dir}/infer.csv'
+        files = glob(f'{folder_path}/*/*_image.jpg')
+        files.sort()
+
         with open(dest_infer_path, 'w') as f:
             writer = csv.writer(f, delimiter=',', lineterminator='\n')
             writer.writerow(['guid/image', 'label'])
-            for i, inputs in enumerate(tqdm_data_loader):
-                img = inputs['image'].to(self.device)
+            for file in files:
+                img = resize(io.imread(file), (256, 512))
+                img = torch.from_numpy(np.transpose(img - 0.5, (2, 0, 1))).float().to(self.device).unsqueeze(0)
                 out = self.model(img)
                 y_hat = torch.argmax(out, 1)
-                bs = img.size()[0]
-                for j in range(bs):
-                    guid = files[i * bs + j].split('/')[-2]
-                    idx = files[i * bs + j].split('/')[-1].replace('_image.jpg', '')
-                    writer.writerow([f'{guid}/{idx}', y_hat[j].detach().cpu().item()])
+                pred = y_hat[0].detach().cpu().item()
+                guid = file.split('/')[-2]
+                idx = file.split('/')[-1].replace('_image.jpg', '')
+                writer.writerow([f'{guid}/{idx}', pred])
 
     @torch.no_grad()
     def evaluate(self, dataloader, phase='test'):
@@ -185,6 +212,8 @@ class Solver:
         ckpt = torch.load(state_path)
         self.model.load_state_dict(ckpt['network'])
         self.model.to(self.device)
+        Visualizer.log_print("model loaded")
         if train:
             self.scheduler.load_state_dict(ckpt['scheduler'])
             self.optim.load_state_dict(ckpt['optimizer'])
+            Visualizer.log_print("scheduler and optimizer loaded")

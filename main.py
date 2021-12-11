@@ -1,6 +1,7 @@
 from argparser import get_option
 from utils.visualizer import Visualizer
 from model.model import PureRGBNet
+from model.resnet import *
 from data.dataset import BaseDataset
 from torch.utils.data import DataLoader
 from functools import partial
@@ -38,7 +39,15 @@ def main():
         with open(file, 'w') as json_file:
             json.dump(args, json_file)
 
-    network = PureRGBNet(opt.num_res_block, opt.ngf, opt.max_channel, opt.input_dim, opt.num_class)
+    network = None
+    if opt.model == 'simple':
+        network = PureRGBNet(opt.num_res_block, opt.ngf, opt.max_channel, opt.input_dim, opt.num_class)
+    elif opt.model == 'resnet34':
+        network = resnet34()
+    elif opt.model == 'resnet50':
+        network = resnet50()
+    elif opt.model == 'resnet18':
+        network = resnet18()
     solver = Solver(network, opt.gpu_id)
     if opt.train:
         # for debug
@@ -47,7 +56,7 @@ def main():
         # profiler.start()
         aug_func = None
         if opt.augment:
-            t = [flip2d, rotate2d, partial(cutout, sz=32), shift_color, partial(guassian_noise, std=0.05)]
+            t = [flip2d, rotate2d, partial(cutout, sz=32), shift_color, partial(guassian_noise, std=0.001)]
             aug_func= Transform(t)
         train_dataset = BaseDataset(base_path=opt.data_root,
                                     phase='train',
@@ -55,9 +64,9 @@ def main():
                                     k_fold=opt.k_fold,
                                     input_size=opt.input_size,
                                     num_class=opt.num_class,
-                                    aug_func=aug_func,
+                                    transform=aug_func,
                                     augment=opt.augment)
-        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True)
+        train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers)
         val_dataloader = None
         if opt.val:
             val_dataset = BaseDataset(base_path=opt.data_root,
@@ -66,7 +75,7 @@ def main():
                                       k_fold=opt.k_fold,
                                       input_size=opt.input_size,
                                       num_class=opt.num_class)
-            val_dataloader = DataLoader(val_dataset, batch_size=opt.batch_size)
+            val_dataloader = DataLoader(val_dataset, batch_size=opt.batch_size, num_workers=opt.num_workers)
         solver.fit(lr=opt.lr,
                    save_dir=opt.save_dir,
                    model_dir=opt.model_dir,
@@ -86,8 +95,8 @@ def main():
                                    phase='test',
                                    input_size=opt.input_size,
                                    num_class=opt.num_class)
-        test_dataloader = DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=False)
-        solver.inference(test_dataloader, opt.data_root, opt.save_dir, opt.step_label)
+        test_dataloader = DataLoader(test_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=opt.num_workers)
+        solver.inference(f'{opt.data_root}/test', opt.save_dir, opt.step_label)
 
 if __name__ == '__main__':
     main()

@@ -49,13 +49,13 @@ class CBAM(nn.Module):
         return x
 
 class RCBAM(nn.Module):
-    def __init__(self, in_channel, out_channel, norm_layer, activation=nn.ReLU, kernel_size=3, stride=1, padding_mode='reflect'):
+    def __init__(self, in_channel, out_channel, norm_layer, kernel_size=3, stride=1, padding_mode='reflect'):
         super(RCBAM, self).__init__()
         self.conv1 = nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, padding_mode=padding_mode)
         self.channel1 = ChannelAttention(out_channel)
         self.spatial1 = SpatialAttention()
         self.norm1 = norm_layer(out_channel)
-        self.act = activation()
+        self.act = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, padding_mode=padding_mode)
         self.channel2 = ChannelAttention(out_channel)
         self.spatial2 = SpatialAttention()
@@ -73,7 +73,7 @@ class RCBAM(nn.Module):
         return x + feature
 
 class ResnetBlock(nn.Module):
-    def __init__(self, in_channel, out_channel,  norm_layer, activation=nn.ReLU, kernel_size=3, stride=1, dropout=.0, padding_mode='reflect'):
+    def __init__(self, in_channel, out_channel,  norm_layer, kernel_size=3, stride=1, dropout=.0, padding_mode='reflect'):
         super(ResnetBlock, self).__init__()
         self.downscale = None
         if stride > 1:
@@ -82,17 +82,16 @@ class ResnetBlock(nn.Module):
                                                 out_channel=out_channel,
                                                 padding_mode=padding_mode,
                                                 norm_layer=norm_layer,
-                                                activation=activation,
                                                 kernel_size=kernel_size,
                                                 stride=stride,
                                                 dropout=dropout)
 
 
-    def _build_conv_block(self, in_channel, out_channel, padding_mode, norm_layer, activation, kernel_size=3, stride=2, dropout=0.):
+    def _build_conv_block(self, in_channel, out_channel, padding_mode, norm_layer, kernel_size=3, stride=2, dropout=0.):
         conv_block = []
         conv_block += [nn.Conv2d(in_channel, in_channel, kernel_size=kernel_size, padding=kernel_size // 2, padding_mode=padding_mode),
                        norm_layer(in_channel),
-                       activation()]
+                       nn.ReLU(inplace=True)]
         if dropout > 0.:
             conv_block += [nn.Dropout(dropout)]
         conv_block += [nn.Conv2d(in_channel, out_channel, kernel_size=3, padding=kernel_size // 2, padding_mode=padding_mode, stride=stride),
@@ -105,3 +104,32 @@ class ResnetBlock(nn.Module):
             scale_x = self.downscale(scale_x)
         out = scale_x + self.res_block(x)
         return out
+
+class SpatialPyramidPooling(nn.Module):
+    def __init__(self, in_channel, out_channel):
+        super(SpatialPyramidPooling, self).__init__()
+        self.conv1 = nn.Conv2d(in_channel, in_channel, kernel_size=3, stride=1, padding=1, padding_mode='reflect')
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channel, in_channel // 4, kernel_size=3, stride=1, padding=1, padding_mode='reflect'),
+                                   nn.ReLU(True),
+                                   nn.Conv2d(in_channel // 4, in_channel, kernel_size=3, stride=1, padding=1, padding_mode='reflect'))
+
+        self.conv3 = nn.Sequential(nn.Conv2d(in_channel, in_channel // 4, kernel_size=3, stride=1, padding=1, padding_mode='reflect'),
+                                   nn.ReLU(True),
+                                   nn.Conv2d(in_channel // 4, in_channel // 4, kernel_size=3, stride=1, padding=1, padding_mode='reflect'),
+                                   nn.ReLU(True),
+                                   nn.Conv2d(in_channel // 4, in_channel, kernel_size=3, stride=1, padding=1, padding_mode='reflect'))
+        self.actv = nn.ReLU(True)
+        self.agg = nn.Conv2d(3 * in_channel, out_channel, kernel_size=1)
+        self.reduce = None
+        if in_channel != out_channel:
+            self.reduce = nn.Conv2d(in_channel, out_channel, kernel_size=1)
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(x)
+        x3 = self.conv3(x)
+        out = th.cat([x1, x2, x3], dim=1)
+        out = self.agg(self.actv(out))
+        if self.reduce:
+            x = self.reduce(x)
+        return out + x
